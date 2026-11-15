@@ -1,4 +1,4 @@
-# Townmaker · Safe Town
+# Safe Town
 
 **출발 전 차량을 점검하고, 주행을 마치면 기록과 함께 마을이 성장하는 Pleos Connect용 안전운전 앱입니다.**
 
