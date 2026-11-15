@@ -37,6 +37,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.math.min
 
 internal val Ink = Color(0xFF173E47)
@@ -50,6 +53,9 @@ internal val Navy = Color(0xFF182F3C)
 internal val Coral = Color(0xFFEC5767)
 internal val Amber = Color(0xFFECA62D)
 private val AppUnit = compositionLocalOf { 1f }
+internal val AppClock = compositionLocalOf { ZonedDateTime.now() }
+internal val timeFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.KOREA)
+internal val dateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일 EEEE", Locale.KOREA)
 internal val Int.u @Composable get() = (this * AppUnit.current).dp
 internal val Int.pt @Composable get() = (this * AppUnit.current).sp
 
@@ -57,7 +63,7 @@ internal val Int.pt @Composable get() = (this * AppUnit.current).sp
 fun PleosApp() {
     val context = LocalContext.current
     val state = remember(context) { PleosDriveState(context.applicationContext) }
-    val automotive = remember(context) { context.isAutomotive() }
+    val automotive = state.automotive
     val navigationService = remember(context, automotive) {
         if (automotive) PleosNavigationService(context.applicationContext) else DemoNavigationService()
     }
@@ -71,7 +77,18 @@ fun PleosApp() {
     }
     LaunchedEffect(context, automotive, lifecycle) {
         if (automotive) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            observeBattery(context) { state.batteryLevel = it }
+            state.inspection = null
+            observeVehicleInspection(context) { state.inspection = it }
+        }
+    }
+    var clock by remember { mutableStateOf(ZonedDateTime.now()) }
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                val now = ZonedDateTime.now()
+                clock = now
+                delay(60_000L - now.second * 1_000L - now.nano / 1_000_000L)
+            }
         }
     }
     var checkShown by rememberSaveable { mutableStateOf(false) }
@@ -95,7 +112,8 @@ fun PleosApp() {
     BoxWithConstraints(Modifier.fillMaxSize().background(Paper).windowInsetsPadding(WindowInsets.safeDrawing)) {
         val scale = min(maxWidth.value / 1280f, maxHeight.value / 720f).coerceIn(.65f, 2.25f)
         val wide = maxWidth.value >= 700f * scale && maxWidth.value >= maxHeight.value * 1.38f
-        CompositionLocalProvider(AppUnit provides scale) {
+        val short = maxHeight.value / scale < 700f
+        CompositionLocalProvider(AppUnit provides scale, AppClock provides clock) {
             Column(
                 Modifier.fillMaxSize().background(
                     Brush.verticalGradient(listOf(Color(0xFFDEEFEC), Color(0xFFF5FAF8), Color(0xFFE4F0EF)))
@@ -111,13 +129,13 @@ fun PleosApp() {
                     DrivePage.Driving -> DrivingPage(state, navigationService, content, wide)
                     DrivePage.History -> HistoryPage(state, content, wide)
                     DrivePage.Profile -> ProfilePage(state, content, wide)
-                    DrivePage.Settings -> SettingsPage(state, content, wide)
+                    DrivePage.Settings -> SettingsPage(state, content)
                     DrivePage.Result -> state.result?.let { ResultPage(it, content, wide) { state.navigate(DrivePage.Village) } }
                 }
-                if (!restricted && state.page != DrivePage.Result) BottomNavigation(state)
+                if (!restricted && state.page != DrivePage.Result) BottomNavigation(state, short)
             }
             if (!restricted && showCheck && state.page == DrivePage.Village) {
-                VehicleCheck(wide, state.batteryLevel) { showCheck = false }
+                VehicleCheck(state.inspection, automotive) { showCheck = false }
             }
         }
     }
@@ -185,8 +203,8 @@ private val iconPaths = mapOf(
 )
 
 @Composable
-private fun BottomNavigation(state: PleosDriveState) {
-    BoxWithConstraints(Modifier.fillMaxWidth().height(78.u).background(Color(0xFFF5FCF9))) {
+private fun BottomNavigation(state: PleosDriveState, short: Boolean) {
+    BoxWithConstraints(Modifier.fillMaxWidth().height(if (short) 66.u else 78.u).background(Color(0xFFF5FCF9))) {
         val showEnd = state.page == DrivePage.Driving && state.isDriving
         val compact = maxWidth < 820.u
         val bar = when {
@@ -225,10 +243,11 @@ internal fun UtilityHeader(title: String) {
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.u)) {
         IconTile("road", 38)
         Column(Modifier.weight(1f)) {
-            Label("다함께 차차차", 16, weight = FontWeight.Bold)
+            Label("Safe Town", 16, weight = FontWeight.Bold)
             Label(title, 10, Muted)
         }
-        Label("6월 12일 수요일 · 10:24", 11)
+        val clock = AppClock.current
+        Label("${clock.format(dateFormat)} · ${clock.format(timeFormat)}", 11)
     }
 }
 
@@ -255,12 +274,12 @@ internal fun Meter(progress: Float, modifier: Modifier = Modifier) {
 
 @Composable
 internal fun AppDialog(title: String, subtitle: String, icon: String, close: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit) {
+    maxDialogWidth: Int = 610, content: @Composable ColumnScope.() -> Unit) {
     Dialog(close, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         val window = (LocalView.current.parent as? DialogWindowProvider)?.window
         SideEffect { window?.setDimAmount(.035f) }
         BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 14.u), contentAlignment = Alignment.Center) {
-            val width = minOf(maxWidth, 610.u)
+            val width = minOf(maxWidth, maxDialogWidth.u)
             Panel(Modifier.width(width).heightIn(max = 615.u), color = Color(0xFFF1FAF6), radius = 24) {
                 Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(21.u),
                     verticalArrangement = Arrangement.spacedBy(10.u)) {

@@ -17,8 +17,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
+import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+private val numericDateFormat = DateTimeFormatter.ofPattern("yyyy. MM. dd", Locale.KOREA)
+private val weekdayFormat = DateTimeFormatter.ofPattern("EEEE", Locale.KOREA)
 
 private data class Rule(val distance: String, val sign: String, val title: String, val detail: String, val color: Color)
 private val demoRules = listOf(
@@ -32,20 +40,39 @@ internal fun DrivingPage(state: PleosDriveState, navigation: NavigationService, 
     var zoom by rememberSaveable { mutableFloatStateOf(1f) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
-    var request by remember { mutableStateOf<String?>(null) }
+    var request by remember { mutableStateOf<NavigationPlace?>(null) }
+    var searchData by remember { mutableStateOf<DestinationSearch?>(null) }
+    var nextInstruction by remember { mutableStateOf<String?>(null) }
     var routeError by rememberSaveable { mutableStateOf<String?>(null) }
     var activeAction by rememberSaveable { mutableIntStateOf(-1) }
     var activeRule by rememberSaveable { mutableIntStateOf(-1) }
 
-    fun route(place: String) {
-        val target = place.trim()
-        if (target.isBlank() || request != null) return
-        query = target
+    fun route(place: NavigationPlace) {
+        if (request != null) return
         searchOpen = false
         routeError = null
-        request = target
+        request = place
     }
-    LaunchedEffect(request) {
+
+    LaunchedEffect(searchOpen, navigation) {
+        if (searchOpen) {
+            searchData = null
+            searchData = navigation.destinationSearch()
+        }
+    }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(state.destination, navigation, lifecycle) {
+        nextInstruction = null
+        if (state.destination?.confirmed == true && !navigation.isDemo) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (true) {
+                    nextInstruction = navigation.nextInstruction()
+                    delay(8_000)
+                }
+            }
+        }
+    }
+    LaunchedEffect(request, navigation) {
         val place = request ?: return@LaunchedEffect
         try {
             state.destination = navigation.requestRoute(place)
@@ -66,7 +93,7 @@ internal fun DrivingPage(state: PleosDriveState, navigation: NavigationService, 
         if (wide) {
             Row(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 17.u, vertical = 10.u),
                 horizontalArrangement = Arrangement.spacedBy(11.u)) {
-                MapPanel(Modifier.weight(1.69f).fillMaxHeight(), state.destination, zoom, request, routeError, navigation.isDemo,
+                MapPanel(Modifier.weight(1.69f).fillMaxHeight(), state.destination, state.elapsed, zoom, request != null, routeError, navigation.isDemo, nextInstruction,
                     { if (request == null) searchOpen = true }, { zoom = (zoom + it).coerceIn(.80f, 1.4f) }, { zoom = 1f })
                 Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(11.u)) {
                     RulePanel(state.elapsed, Modifier.weight(1.94f).fillMaxWidth()) { activeRule = it }
@@ -76,7 +103,7 @@ internal fun DrivingPage(state: PleosDriveState, navigation: NavigationService, 
         } else {
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(10.u),
                 verticalArrangement = Arrangement.spacedBy(10.u)) {
-                MapPanel(Modifier.fillMaxWidth().height(405.u), state.destination, zoom, request, routeError, navigation.isDemo,
+                MapPanel(Modifier.fillMaxWidth().height(405.u), state.destination, state.elapsed, zoom, request != null, routeError, navigation.isDemo, nextInstruction,
                     { if (request == null) searchOpen = true }, { zoom = (zoom + it).coerceIn(.80f, 1.4f) }, { zoom = 1f })
                 RulePanel(state.elapsed, Modifier.fillMaxWidth()) { activeRule = it }
                 QuickPanel(state.selectedQuickActions, Modifier.fillMaxWidth().height(125.u)) { activeAction = it }
@@ -86,20 +113,43 @@ internal fun DrivingPage(state: PleosDriveState, navigation: NavigationService, 
     if (searchOpen) AppDialog("목적지 검색", if (navigation.isDemo) "경로 안내 · 데모" else "Pleos 내비게이션",
         "location", { searchOpen = false }) {
         routeError?.let { Label(it, 13, Coral) }
-        if (navigation.isDemo) Label("출발 · 현재 위치", 13, Muted)
-        OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), singleLine = true,
-            label = { Label(if (navigation.isDemo) "장소, 주소를 입력하세요" else "목적지 이름 또는 주소", 13, Muted) })
-        ActionButton(if (navigation.isDemo) "가장 빠른 경로 찾기" else "Pleos 내비로 보내기", Modifier.fillMaxWidth()) {
-            route(query)
+        OutlinedTextField(searchData?.origin ?: if (searchData == null) "조회 중…" else "현재 위치 확인 불가",
+            {}, Modifier.fillMaxWidth(), readOnly = true, singleLine = true, label = { Label("출발", 13, Muted) })
+        OutlinedTextField(query, { query = it; routeError = null }, Modifier.fillMaxWidth(), singleLine = true,
+            label = { Label("도착", 13, Muted) },
+            placeholder = { Label("장소, 주소를 입력하세요", 13, Muted) })
+        val recent = searchData?.recent
+        val allPlaces = recent.orEmpty() + navigation.suggestedPlaces
+        val input = query.trim()
+        ActionButton("가장 빠른 경로 찾기", Modifier.fillMaxWidth()) {
+            val match = allPlaces.firstOrNull { it.name.equals(input, true) || it.address.equals(input, true) }
+                ?: allPlaces.filter { input.isNotBlank() &&
+                    (it.name.contains(input, true) || it.address.contains(input, true)) }.distinct().singleOrNull()
+            when {
+                input.isBlank() -> routeError = "목적지를 입력해 주세요."
+                match != null -> route(match)
+                navigation.isDemo -> route(NavigationPlace(input))
+                else -> routeError = "최근 목적지에서 선택하거나 연결 테스트 목적지를 사용해 주세요."
+            }
         }
-        Label(if (navigation.isDemo) "최근 검색한 목적지" else "연결 테스트 목적지", 13, weight = FontWeight.Bold)
-        navigation.suggestedPlaces.filter { !navigation.isDemo || query.isBlank() || it.contains(query) }.forEach { place ->
-            AppListRow("location", place, if (navigation.isDemo) "최근 목적지" else "서울시 강남구 남부순환로 2621",
-                onClick = { route(place) })
+        Label("최근 검색한 목적지", 13, weight = FontWeight.Bold)
+        val filtered = recent.orEmpty().filter { input.isBlank() || it.name.contains(input, true) || it.address.contains(input, true) }
+        if (filtered.isEmpty()) Label(when {
+            searchData == null -> "조회 중…"
+            recent == null -> "Pleos 최근 목적지를 확인할 수 없어요."
+            recent.isEmpty() -> "최근 목적지가 없어요."
+            else -> "입력과 일치하는 최근 목적지가 없어요."
+        }, 12, Muted)
+        filtered.forEach { place ->
+            AppListRow("history", place.name, place.address.ifBlank { "최근 목적지" }) { route(place) }
         }
+        navigation.suggestedPlaces.filterNot { sample -> recent.orEmpty().any { it.poiId != null && it.poiId == sample.poiId } }
+            .forEach { place ->
+                AppListRow("location", place.name, "연결 테스트 · ${place.address}") { route(place) }
+            }
     }
     if (activeAction >= 0) {
-        QuickActionDialog(activeAction, navigation, { activeAction = -1 }, ::route)
+        QuickActionDialog(activeAction) { activeAction = -1 }
     }
     if (activeRule >= 0) {
         val rule = demoRules[activeRule]
@@ -112,27 +162,27 @@ internal fun DrivingPage(state: PleosDriveState, navigation: NavigationService, 
 
 @Composable
 private fun DrivingHeader(elapsed: Int, battery: String, wide: Boolean) {
-    val time = String.format(Locale.US, "%02d:%02d", elapsed / 60, elapsed % 60)
     Row(Modifier.fillMaxWidth().height(if (wide) 92.u else 70.u).background(Color(0xFFF6FCF9))
         .padding(horizontal = if (wide) 25.u else 12.u), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(if (wide) 24.u else 10.u)) {
         Row(Modifier.weight(if (wide) 1.25f else 1.75f), horizontalArrangement = Arrangement.spacedBy(9.u),
             verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(9.u).background(Mint, CircleShape))
+            IconTile("road", 38)
             Column {
-                Label("안전 주행 기록 중", 15, weight = FontWeight.Bold, lines = 1)
-                Label("$time · 시연 주행 기록 중", 10, Muted, lines = 1)
+                Label("Safe Town", 15, weight = FontWeight.Bold, lines = 1)
+                Label("안전운전으로 성장하는 도시", 10, Muted, lines = 1)
             }
         }
         if (wide) {
-            HeaderMetric("calendar", "2025. 06. 12", "수요일", Modifier.weight(1f))
-            HeaderMetric("clock", "현재 시각", "10:24", Modifier.weight(.9f))
+            val clock = AppClock.current
+            HeaderMetric("calendar", clock.format(numericDateFormat), clock.format(weekdayFormat), Modifier.weight(1f))
+            HeaderMetric("clock", "현재 시각", clock.format(timeFormat), Modifier.weight(.9f))
         }
         HeaderMetric("sparkles", "이번 주행 경험치", "+${elapsed / 10} XP", Modifier.weight(1.15f))
         HeaderMetric("fuel", "배터리", battery, Modifier.weight(.8f))
         if (wide) {
-            HeaderMetric("road", "전체 주행", "24,386 km", Modifier.weight(1f))
-            HeaderMetric("sun", "오늘의 날씨", "24° 맑음", Modifier.weight(.95f))
+            HeaderMetric("road", "누적 안전운전거리", "2,277 km · 시연", Modifier.weight(1f))
+            HeaderMetric("sun", "오늘의 날씨 · 시연", "24° 맑음", Modifier.weight(.95f))
         }
     }
 }
@@ -150,13 +200,17 @@ private fun HeaderMetric(icon: String, caption: String, value: String, modifier:
 }
 
 @Composable
-private fun MapPanel(modifier: Modifier, destination: RoutePreview?, zoom: Float, request: String?, routeError: String?,
-    demoNavigation: Boolean, search: () -> Unit, adjustZoom: (Float) -> Unit, reset: () -> Unit) {
+private fun MapPanel(modifier: Modifier, destination: RoutePreview?, elapsed: Int, zoom: Float, requesting: Boolean, routeError: String?,
+    demoNavigation: Boolean, nextInstruction: String?, search: () -> Unit, adjustZoom: (Float) -> Unit, reset: () -> Unit) {
     Panel(modifier) {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().height(68.u).padding(horizontal = 15.u),
                 horizontalArrangement = Arrangement.spacedBy(10.u), verticalAlignment = Alignment.CenterVertically) {
-                Label("다함께 차차차", 12, Teal, weight = FontWeight.Bold, lines = 1)
+                Column {
+                    Label("안전 주행 기록 중", 11, Teal, weight = FontWeight.Bold, lines = 1)
+                    val time = String.format(Locale.US, "%02d:%02d", elapsed / 60, elapsed % 60)
+                    Label("$time · 세션 기록 중", 9, Muted, lines = 1)
+                }
                 Row(verticalAlignment = Alignment.Bottom) {
                     Label("58", 24, weight = FontWeight.Bold)
                     Label("km/h · 데모", 8, Muted)
@@ -164,16 +218,19 @@ private fun MapPanel(modifier: Modifier, destination: RoutePreview?, zoom: Float
                 IconTile("arrow", 37, Color(0xFF4AC8CF))
                 Column(Modifier.weight(1f)) {
                     Label(when {
-                        request != null -> "경로 요청 중"
+                        requesting -> "경로 요청 중"
                         destination != null && !demoNavigation -> if (destination.confirmed) "Pleos 목적지 확인 완료"
                             else "Pleos 내비에서 경로 확인"
-                        else -> "320m 앞 · 시연"
+                        demoNavigation -> "320m 앞 · 시연"
+                        else -> "Pleos 내비게이션"
                     }, 10, Teal, lines = 1)
-                    Label(destination?.place ?: "푸른대로 방면 우회전", 14, weight = FontWeight.Bold, lines = 1)
+                    val instruction = nextInstruction?.let { "안내 · $it" }
+                    Label(instruction ?: destination?.place ?: if (demoNavigation) "푸른대로 방면 우회전"
+                        else "목적지를 선택하세요", 14, weight = FontWeight.Bold, lines = 1)
                 }
-                if (demoNavigation || destination == null) {
-                    Column { Label("도착 예정", 9, Muted); Label(destination?.arrival ?: "10:48", 12, weight = FontWeight.Bold) }
-                    Column { Label("남은 거리", 9, Muted); Label(destination?.distance ?: "12.4km", 12, weight = FontWeight.Bold) }
+                if (demoNavigation) {
+                    Column { Label("도착 예정", 9, Muted); Label(if (destination == null) "10:48" else "10:41", 12, weight = FontWeight.Bold) }
+                    Column { Label("남은 거리", 9, Muted); Label(if (destination == null) "12.4km" else "8.7km", 12, weight = FontWeight.Bold) }
                 }
             }
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
@@ -184,7 +241,7 @@ private fun MapPanel(modifier: Modifier, destination: RoutePreview?, zoom: Float
                         horizontalArrangement = Arrangement.spacedBy(9.u)) {
                         AppIcon("location", Modifier.size(18.u), Color(0xFF78E1E8))
                         Label(when {
-                            request != null -> "경로를 찾는 중…"
+                            requesting -> "경로를 찾는 중…"
                             routeError != null -> "목적지 설정 실패 · 다시 보기"
                             destination != null -> if (destination.confirmed) destination.place else "Pleos 내비 요청 · ${destination.place}"
                             else -> "어디로 갈까요?"
@@ -261,7 +318,7 @@ private fun QuickPanel(actions: List<Int>, modifier: Modifier, open: (Int) -> Un
 }
 
 @Composable
-private fun QuickActionDialog(index: Int, navigation: NavigationService, close: () -> Unit, route: (String) -> Unit) {
+private fun QuickActionDialog(index: Int, close: () -> Unit) {
     val action = quickActions[index]
     var reply by rememberSaveable(index) { mutableStateOf("") }
     var playing by rememberSaveable(index) { mutableStateOf(false) }
@@ -292,17 +349,7 @@ private fun QuickActionDialog(index: Int, navigation: NavigationService, close: 
                     AppListRow("sparkles", prompt, "예시 음성 명령") { reply = "선택한 예시 명령 · $prompt" }
                 }
             }
-            4 -> {
-                if (navigation.isDemo) {
-                    Label("저장된 집으로 경로를 설정할까요?", 16)
-                    ActionButton("경로 찾기", Modifier.fillMaxWidth()) { route("집"); close() }
-                } else Label("앱에 저장된 집 주소가 없어요.", 16)
-            }
-            5 -> if (navigation.isDemo) {
-                navigation.suggestedPlaces.forEach { place ->
-                    AppListRow("location", place, "최근 목적지") { route(place); close() }
-                }
-            } else Label("Pleos 최근 목적지 연결을 준비 중이에요.", 16)
+
         }
     }
 }

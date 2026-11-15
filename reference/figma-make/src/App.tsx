@@ -344,6 +344,8 @@ function VillageScreen({
   onNavigate,
   showStartupCheck,
   onStartupCheckShown,
+  friendVisit,
+  onReturnOwnVillage,
 }: {
   onStart: () => void;
   isDriving: boolean;
@@ -351,11 +353,13 @@ function VillageScreen({
   onNavigate: (page: Page) => void;
   showStartupCheck: boolean;
   onStartupCheckShown: () => void;
+  friendVisit: (typeof friends)[number] | null;
+  onReturnOwnVillage: () => void;
 }) {
   const [chromeVisible, setChromeVisible] = useState(true);
-  const [stage, setStage] = useState(0);
+  const [stage, setStage] = useState(friendVisit?.stage ?? 0);
   const [modal, setModal] = useState<"friends" | "collection" | null>(null);
-  const [owner, setOwner] = useState("나의 마을");
+  const [owner, setOwner] = useState(friendVisit ? `${friendVisit.name}의 마을` : "나의 마을");
   const [showVehicleCheck, setShowVehicleCheck] = useState(false);
   const toggleChrome = useCallback(() => setChromeVisible((value) => !value), []);
   const stageInfo = villageStages[stage];
@@ -386,8 +390,7 @@ function VillageScreen({
               <Icon name="road" size={22} />
             </span>
             <div>
-              <strong>다함께 차차차</strong>
-              <span>안전운전으로 자라는 마을</span>
+              <strong>Safe Town</strong>
             </div>
           </div>
           <div className="home-date">
@@ -398,26 +401,39 @@ function VillageScreen({
         </header>
 
         <aside className="level-card glass-card">
-          <div className="level-top">
-            <span className="level-badge">LV. {String(stage + 1).padStart(2, "0")}</span>
-            <span>{owner}</span>
+          <div className="home-grade-top">
+            <div>
+              <small>{owner === "나의 마을" ? "나의" : owner} 안전운전 등급</small>
+              <h1>
+                <b>Lv.1</b> 입니다
+              </h1>
+              <p>
+                누적 안전운전거리{" "}
+                <strong>{stage === 0 ? "2,277km" : `${(stage + 1) * 1240}km`}</strong>
+              </p>
+            </div>
+            <span className="grade-emblem">
+              <b>LV.1</b>
+            </span>
           </div>
-          <h1>
-            작은 발걸음에서
-            <br />
-            <em>별까지 이어지는 길</em>
-          </h1>
-          <div className="village-stage-name">{stageInfo[0]}</div>
-          <div className="xp-row">
-            <span>누적 안전 주행</span>
-            <strong>{stage === 0 ? "186 km" : `${(stage + 1) * 1240} km`}</strong>
+          <div className="grade-progress-label">
+            <span>다음 레벨까지</span>
+            <b>723km 남음</b>
           </div>
-          <div className="xp-track">
-            <i style={{ width: `${stage === 14 ? 100 : 38}%` }} />
+          <div className="grade-progress">
+            <i style={{ width: "76%" }} />
           </div>
-          <p>
-            <Icon name="shield" size={17} /> 오늘 안전 주행으로 <b>+180 XP</b>
-          </p>
+          <div className="grade-progress-scale">
+            <span>0km</span>
+            <span>3,000km</span>
+          </div>
+          <div className="grade-card-footer">
+            <span>
+              <Icon name="home" size={17} />
+              <b>{stageInfo[0]}</b>
+            </span>
+            <em>오늘 +180 XP</em>
+          </div>
         </aside>
 
         <div className="village-side-actions">
@@ -524,6 +540,7 @@ function VillageScreen({
                     onClick={() => {
                       setStage(0);
                       setOwner("나의 마을");
+                      onReturnOwnVillage();
                       setModal(null);
                     }}
                   >
@@ -592,6 +609,8 @@ function VillageScreen({
               ["도어 잠금", "완료", true],
               ["브레이크액", "정상", true],
               ["워셔액", "보충 필요", false],
+              ["엔진오일 경고등", "소등", true],
+              ["미션오일 경고등", "점검 필요", false],
             ].map(([label, value, good]) => (
               <div className={good ? "good" : "warning"} key={String(label)}>
                 <span>{good ? "✓" : "!"}</span>
@@ -603,12 +622,12 @@ function VillageScreen({
           <div className="check-reward">
             <Icon name="sparkles" size={18} />
             <span>
-              <b>안전 조건 5개 충족</b>
+              <b>안전 조건 6개 충족</b>
               <small>차량 관리 보너스 +15 XP</small>
             </span>
           </div>
           <p className="maintenance-warning">
-            워셔액 보충이 필요합니다. 다음 주행 전 점검해 주세요.
+            워셔액 보충 및 미션오일 점검이 필요합니다. 다음 주행 전 정비해 주세요.
           </p>
         </div>
       )}
@@ -958,10 +977,12 @@ function DrivingScreen({
     <main className="drive-screen screen-enter">
       <header className="drive-header">
         <div className="drive-brand">
-          <span className="live-dot" />
+          <span className="brand-mark">
+            <Icon name="road" size={20} />
+          </span>
           <span className="drive-brand-copy">
-            <strong>안전 주행 기록 중</strong>
-            <small>{driveTime} · 주행 데이터 저장 중</small>
+            <strong>Safe Town</strong>
+            <small>안전운전으로 성장하는 도시</small>
           </span>
         </div>
         <div className="status-strip">
@@ -998,9 +1019,9 @@ function DrivingScreen({
           <div className="status-item">
             <Icon name="road" size={18} />
             <span>
-              <small>전체 주행</small>
+              <small>누적 안전운전거리</small>
               <b>
-                24,386 <em>km</em>
+                2,277 <em>km</em>
               </b>
             </span>
           </div>
@@ -1021,7 +1042,10 @@ function DrivingScreen({
         <section className="map-card">
           <div className="map-topline">
             <div className="map-brand-speed">
-              <span className="mini-app-name">다함께 차차차</span>
+              <span className="map-record-status">
+                <b>안전 주행 기록 중</b>
+                <small>{driveTime} · 주행 데이터 저장 중</small>
+              </span>
               <span className="map-speed">
                 <b>58</b>
                 <small>km/h</small>
@@ -1173,12 +1197,6 @@ function DrivingScreen({
                   <span>출발</span>
                   <input value="현재 위치" readOnly />
                 </label>
-                <button
-                  className="route-search-button"
-                  onClick={() => requestFastestRoute(destination)}
-                >
-                  <Icon name="arrow" size={17} /> 가장 빠른 경로 찾기
-                </button>
                 <label>
                   <span>도착</span>
                   <input
@@ -1188,6 +1206,12 @@ function DrivingScreen({
                     placeholder="장소, 주소를 입력하세요"
                   />
                 </label>
+                <button
+                  className="route-search-button"
+                  onClick={() => requestFastestRoute(destination)}
+                >
+                  <Icon name="arrow" size={17} /> 가장 빠른 경로 찾기
+                </button>
                 <h3>최근 검색한 목적지</h3>
                 {["서울숲 주차장", "여의도 한강공원", "성수동 카페거리", "강남역 5번 출구"]
                   .filter((place) => !destination || place.includes(destination))
@@ -1359,7 +1383,7 @@ function UtilityHeader({ title }: { title: string }) {
           <Icon name="road" size={20} />
         </span>
         <span>
-          <strong>다함께 차차차</strong>
+          <strong>Safe Town</strong>
           <small>{title}</small>
         </span>
       </div>
@@ -1421,12 +1445,14 @@ function ProfileDetail({
   onNavigate,
   driverName,
   onDriverNameChange,
+  onFriendVisit,
 }: {
   type: string;
   onClose: () => void;
   onNavigate: (page: Page) => void;
   driverName: string;
   onDriverNameChange: (name: string) => void;
+  onFriendVisit: (friend: (typeof friends)[number]) => void;
 }) {
   const [visibility, setVisibility] = useState(true);
   const [draftName, setDraftName] = useState(driverName);
@@ -1541,7 +1567,7 @@ function ProfileDetail({
         </div>
         <div className="action-list">
           {friends.map((friend) => (
-            <button key={friend.name}>
+            <button key={friend.name} onClick={() => onFriendVisit(friend)}>
               <span className="list-avatar">{friend.name[0]}</span>
               <span>
                 <b>{friend.name}</b>
@@ -1747,7 +1773,7 @@ function SettingsDetail({ type, onClose }: { type: string; onClose: () => void }
           <span className="brand-mark">
             <Icon name="road" size={30} />
           </span>
-          <h2>다함께 차차차</h2>
+          <h2>Safe Town</h2>
           <p>안전운전으로 함께 성장하는 마을</p>
           <b>Version 1.0.0 · Pleos Connect</b>
         </div>
@@ -1924,12 +1950,14 @@ function ProfilePage({
   onStartDrive,
   driverName,
   onDriverNameChange,
+  onFriendVisit,
 }: {
   onNavigate: (page: Page) => void;
   isDriving: boolean;
   onStartDrive: () => void;
   driverName: string;
   onDriverNameChange: (name: string) => void;
+  onFriendVisit: (friend: (typeof friends)[number]) => void;
 }) {
   const [selectedPart, setSelectedPart] = useState<VehiclePart>("coolant");
   const [selectedPartKey, setSelectedPartKey] = useState("coolant");
@@ -1953,19 +1981,19 @@ function ProfilePage({
             <div>
               <small>골드 드라이버</small>
               <h1>{driverName}</h1>
-              <p>마을 레벨 8 · 프로필 공개</p>
+              <p>마을 레벨 1 · 프로필 공개</p>
             </div>
             <div className="profile-metrics">
               <span>
-                <b>8,420</b>
-                <small>누적 주행 km</small>
+                <b>2,277</b>
+                <small>누적 안전운전 km</small>
               </span>
               <span>
                 <b>94</b>
                 <small>안전운전 점수</small>
               </span>
               <span>
-                <b>Lv. 8</b>
+                <b>Lv. 1</b>
                 <small>마을 레벨</small>
               </span>
             </div>
@@ -2001,18 +2029,17 @@ function ProfilePage({
           <h3>차량 부품 상태</h3>
           <div className="part-list">
             {[
-              ["battery", "battery", "고전압 배터리", "72% · 정상", "72%"],
-              ["tire", "tire", "타이어 공기압", "36 / 36 PSI", "92%"],
-              ["brake", "brake", "브레이크 패드", "잔량 81%", "81%"],
-              ["coolant", "coolant", "냉각수", "점검 8,200km", "65%"],
-              ["engine-oil", "coolant", "엔진 오일", "레벨 정상", "88%"],
-              ["brake-fluid", "brake", "브레이크액", "수분도 정상", "91%"],
-              ["washer", "coolant", "워셔액", "보충 필요", "24%"],
-              ["regen", "battery", "회생 제동 시스템", "정상 작동", "96%"],
-              ["suspension", "tire", "서스펜션", "점검 12,000km", "78%"],
-              ["air-filter", "battery", "에어컨 필터", "교체 2,100km", "62%"],
-              ["wiper", "coolant", "와이퍼 블레이드", "양호", "76%"],
-              ["lamp", "battery", "전조등·후미등", "전체 정상", "100%"],
+              ["engine-oil", "coolant", "엔진오일", "교체까지 7,640km", "76%"],
+              ["brake-fluid", "brake", "브레이크액", "교체까지 15,614km", "61%"],
+              ["coolant", "coolant", "냉각수", "교체까지 75,614km", "76%"],
+              ["aircon-filter", "battery", "에어컨필터", "교체까지 7,640km", "76%"],
+              ["brake", "brake", "브레이크패드", "교체까지 15,614km", "61%"],
+              ["battery", "battery", "자동차 배터리", "교체까지 2년 4개월", "58%"],
+              ["tire", "tire", "타이어", "교체까지 25,614km", "51%"],
+              ["engine-air", "battery", "엔진에어필터", "교체까지 15,614km", "61%"],
+              ["mission-oil", "coolant", "미션오일", "교체까지 55,614km", "70%"],
+              ["spark-plug", "battery", "점화플러그", "교체까지 55,614km", "70%"],
+              ["fuel-filter", "battery", "연료필터", "교체까지 25,614km", "51%"],
             ].map(([key, focus, label, value, width]) => (
               <button
                 key={key}
@@ -2047,6 +2074,7 @@ function ProfilePage({
           onNavigate={onNavigate}
           driverName={driverName}
           onDriverNameChange={onDriverNameChange}
+          onFriendVisit={onFriendVisit}
         />
       )}
     </main>
@@ -2055,14 +2083,10 @@ function ProfilePage({
 
 function SettingsPage({
   onNavigate,
-  quickActions,
-  onQuickActionsChange,
   isDriving,
   onStartDrive,
 }: {
   onNavigate: (page: Page) => void;
-  quickActions: string[];
-  onQuickActionsChange: (actions: string[]) => void;
   isDriving: boolean;
   onStartDrive: () => void;
 }) {
@@ -2100,36 +2124,6 @@ function SettingsPage({
             </i>
           </button>
         ))}
-        <h3>내비게이션 빠른 실행</h3>
-        <div className="quick-action-settings">
-          <div>
-            <b>오른쪽 하단 버튼 편집</b>
-            <small>사용할 기능을 최대 4개까지 선택하세요</small>
-          </div>
-          <div className="quick-action-choices">
-            {quickActionOptions.map((item) => {
-              const active = quickActions.includes(item.id);
-              return (
-                <button
-                  key={item.id}
-                  className={active ? "active" : ""}
-                  onClick={() => {
-                    if (active) {
-                      if (quickActions.length > 1)
-                        onQuickActionsChange(quickActions.filter((id) => id !== item.id));
-                    } else if (quickActions.length < 4) {
-                      onQuickActionsChange([...quickActions, item.id]);
-                    }
-                  }}
-                >
-                  <Icon name={item.icon} size={17} />
-                  <span>{item.label}</span>
-                  <em>{active ? "사용 중" : "추가"}</em>
-                </button>
-              );
-            })}
-          </div>
-        </div>
         <h3>개인정보 및 계정</h3>
         <button className="setting-row" onClick={() => toggle(7)}>
           <span>
@@ -2145,7 +2139,6 @@ function SettingsPage({
           "주행 데이터 관리",
           "개인정보 및 보안",
           "음성 데이터 및 AI 설정",
-          "지도 다운로드 관리",
           "배지·컬렉션 알림 관리",
           "화면 밝기 및 주·야간 모드",
           "운전자 프로필 전환",
@@ -2263,6 +2256,7 @@ export default function App() {
   const [quickActions, setQuickActions] = useState(["phone", "message", "music", "ai"]);
   const [driverName, setDriverName] = useState("안전운전 마스터");
   const [vehicleCheckSeen, setVehicleCheckSeen] = useState(false);
+  const [friendVisit, setFriendVisit] = useState<(typeof friends)[number] | null>(null);
 
   const startDrive = () => {
     setIsDriving(true);
@@ -2302,18 +2296,14 @@ export default function App() {
         onStartDrive={startDrive}
         driverName={driverName}
         onDriverNameChange={setDriverName}
+        onFriendVisit={(friend) => {
+          setFriendVisit(friend);
+          setPage("village");
+        }}
       />
     );
   if (page === "settings")
-    return (
-      <SettingsPage
-        onNavigate={setPage}
-        quickActions={quickActions}
-        onQuickActionsChange={setQuickActions}
-        isDriving={isDriving}
-        onStartDrive={startDrive}
-      />
-    );
+    return <SettingsPage onNavigate={setPage} isDriving={isDriving} onStartDrive={startDrive} />;
   return (
     <VillageScreen
       onStart={startDrive}
@@ -2322,6 +2312,8 @@ export default function App() {
       onNavigate={setPage}
       showStartupCheck={!vehicleCheckSeen}
       onStartupCheckShown={() => setVehicleCheckSeen(true)}
+      friendVisit={friendVisit}
+      onReturnOwnVillage={() => setFriendVisit(null)}
     />
   );
 }

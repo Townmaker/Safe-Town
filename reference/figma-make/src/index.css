@@ -4564,6 +4564,7 @@
 
 /* Final readability and state corrections */
 .vehicle-check-pop {
+  width: min(720px, 86vw);
   border-color: rgba(255, 255, 255, 0.58);
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.76), rgba(239, 255, 249, 0.64));
   box-shadow: 0 24px 70px rgba(29, 88, 93, 0.18);
@@ -4653,4 +4654,369 @@
 
 .car-visual {
   height: 220px;
+}
+
+/* Safe Town brand and home grade card */
+.village-screen .level-card {
+  width: clamp(290px, 25vw, 350px);
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f7fbfa;
+  background: linear-gradient(145deg, rgba(29, 39, 42, 0.94), rgba(37, 47, 48, 0.9));
+  box-shadow: 0 22px 55px rgba(34, 74, 80, 0.24);
+  backdrop-filter: blur(16px);
+}
+
+.home-grade-top {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.home-grade-top small {
+  color: #b8c1c1;
+  font-size: 10px;
+}
+
+.home-grade-top h1 {
+  margin: 7px 0 11px;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  text-shadow: none;
+}
+
+.home-grade-top h1 b {
+  font-size: 32px;
+}
+
+.home-grade-top p {
+  margin: 0;
+  color: #b6c0c0;
+  font-size: 9px;
+}
+
+.home-grade-top p strong {
+  color: #f1f6f5;
+  font-size: 11px;
+}
+
+.grade-emblem {
+  position: relative;
+  display: grid;
+  width: 72px;
+  height: 80px;
+  place-items: center;
+  clip-path: polygon(50% 0, 92% 24%, 92% 76%, 50% 100%, 8% 76%, 8% 24%);
+  color: #6f4d00;
+  background: linear-gradient(145deg, #fff2a4, #d99d21 58%, #8a5a00);
+  filter: drop-shadow(0 8px 11px rgba(0, 0, 0, 0.24));
+}
+
+.grade-emblem::before {
+  content: "";
+  position: absolute;
+  width: 58px;
+  height: 65px;
+  clip-path: inherit;
+  background: linear-gradient(145deg, #f9dc70, #bf8114);
+}
+
+.grade-emblem b {
+  position: relative;
+  z-index: 1;
+  font-size: 23px;
+}
+
+.grade-progress-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 20px 0 8px;
+  color: #aeb9b9;
+  font-size: 8px;
+}
+
+.grade-progress-label b {
+  color: #fff;
+  font-size: 10px;
+}
+
+.grade-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #6c7171;
+}
+
+.grade-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f35f64, #ff9c60);
+  box-shadow: 0 0 10px rgba(245, 94, 97, 0.35);
+}
+
+.grade-progress-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  color: #929e9e;
+  font-size: 7px;
+}
+
+.grade-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 17px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.grade-card-footer span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #8ed8ca;
+}
+
+.grade-card-footer b {
+  color: #e8f4f1;
+  font-size: 9px;
+}
+
+.grade-card-footer em {
+  color: #ffc76e;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+/* Eight-item startup inspection */
+.vehicle-check-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.vehicle-check-grid > div {
+  min-width: 0;
+}
+
+.vehicle-check-grid small,
+.vehicle-check-grid b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Bright social windows */
+.village-modal {
+  color: #193f47;
+  border-color: rgba(60, 133, 133, 0.18);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(236, 249, 245, 0.98));
+  box-shadow: 0 28px 80px rgba(35, 85, 91, 0.24);
+}
+
+.village-modal header small {
+  color: #248b82;
+}
+
+.village-modal h2 {
+  color: #183f47;
+}
+
+.village-modal header button {
+  color: #67878b;
+  border-color: #d9e7e4;
+  background: #f4faf8;
+}
+
+.friend-list > button {
+  color: #66878b;
+  border-color: #deebe8;
+  background: #f7fbfa;
+}
+
+.friend-list b {
+  color: #21484f;
+}
+
+.badge-grid > div {
+  border-color: #dceae7;
+  background: #f7fbf9;
+}
+
+.badge-grid b {
+  color: #264b52;
+}
+
+/* Driving hierarchy updates */
+.map-record-status {
+  display: grid;
+  min-width: 135px;
+  gap: 3px;
+}
+
+.map-record-status b {
+  color: #18877d;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.map-record-status small {
+  color: #6a8a8e;
+  font-size: 7px;
+  white-space: nowrap;
+}
+
+.destination-search .route-search-button {
+  order: 3;
+  margin-top: 8px;
+}
+
+.history-layout,
+.profile-layout {
+  height: calc(100% - 166px);
+  margin-block: 8px;
+}
+
+.utility-page > .settings-panel {
+  height: calc(100% - 156px);
+  margin-block: 8px;
+}
+
+.history-list-panel {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.drive-record-list {
+  min-height: 0;
+  flex: 1;
+  padding-right: 5px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+@media (max-width: 1050px), (max-height: 700px) {
+  .village-screen .level-card {
+    width: 300px;
+  }
+
+  .vehicle-check-pop {
+    width: min(700px, 90vw);
+  }
+
+  .vehicle-check-grid > div {
+    padding: 8px;
+  }
+}
+
+/* Unified level card and bottom navigation sizing */
+.village-screen .level-card {
+  color: #173f47;
+  border-color: rgba(66, 137, 137, 0.18);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(226, 248, 241, 0.93));
+  box-shadow: 0 22px 55px rgba(46, 103, 108, 0.2);
+}
+
+.home-grade-top small,
+.home-grade-top p {
+  color: #5e8084;
+}
+
+.home-grade-top h1 {
+  color: #173f47;
+  text-shadow: none;
+}
+
+.home-grade-top p strong {
+  color: #164d54;
+}
+
+.grade-emblem {
+  color: #0f625f;
+  background: linear-gradient(145deg, #d8fff2, #76d7c0 58%, #2b958e);
+}
+
+.grade-emblem::before {
+  background: linear-gradient(145deg, #c9f5e8, #5bc4ad);
+}
+
+.grade-progress-label {
+  color: #5e7f83;
+}
+
+.grade-progress-label b {
+  color: #184950;
+}
+
+.grade-progress {
+  background: #cfdfdc;
+}
+
+.grade-progress-scale {
+  color: #6d898d;
+}
+
+.grade-card-footer {
+  border-color: rgba(62, 125, 126, 0.14);
+}
+
+.grade-card-footer b {
+  color: #244d53;
+}
+
+.grade-card-footer em {
+  color: #b86b1a;
+}
+
+.drive-bottom,
+.home-app-nav,
+.utility-bottom-nav {
+  height: 78px;
+  flex-basis: 78px;
+}
+
+.utility-page {
+  padding-bottom: 0;
+}
+
+.history-layout,
+.profile-layout {
+  height: calc(100% - 158px);
+  margin: 8px 14px 0;
+}
+
+.utility-page > .settings-panel {
+  height: calc(100% - 158px);
+  margin: 8px 14px 0;
+}
+
+.destination-search .route-search-button {
+  width: calc(100% - 44px);
+  margin: 8px 0 13px 44px;
+}
+
+@media (max-height: 700px) {
+  .drive-bottom,
+  .home-app-nav,
+  .utility-bottom-nav {
+    height: 66px;
+    flex-basis: 66px;
+  }
+
+  .history-layout,
+  .profile-layout,
+  .utility-page > .settings-panel {
+    height: calc(100% - 138px);
+    margin-top: 6px;
+  }
+
+  .utility-page {
+    padding-bottom: 0;
+  }
 }

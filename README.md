@@ -1,4 +1,4 @@
-# Townmaker · 다함께 차차차
+# Townmaker · Safe Town
 
 Pleos Connect용 안전운전 마을 앱입니다. Kotlin과 Jetpack Compose로 차량용 화면을 구성합니다.
 
@@ -26,4 +26,4 @@ macOS 또는 Linux에서는 `./gradlew :app:assembleDebug :app:testDebugUnitTest
 
 ## 현재 동작
 
-Pleos 에뮬레이터에서 배터리 표시, 주행 제한, `42dot` 목적지 전달을 확인했습니다. 앱의 지도와 주행 점수는 시연용입니다. 나머지 연동과 화면 검증 현황은 [PLEOS_PROGRESS.md](PLEOS_PROGRESS.md)에 있습니다.
+Pleos 에뮬레이터에서 배터리·안전벨트·도어 잠금 표시, 주행 제한, 내비의 현재 위치와 최근 목적지 조회, `42dot` 목적지 전달을 확인했습니다. 앱의 지도와 주행 점수는 시연용입니다. 나머지 연동과 화면 검증 현황은 [PLEOS_PROGRESS.md](PLEOS_PROGRESS.md)에 있습니다.

@@ -50,20 +50,23 @@ internal fun HistoryPage(state: PleosDriveState, modifier: Modifier, wide: Boole
         UtilityHeader("주행히스토리")
         if (wide) Row(Modifier.fillMaxWidth().weight(1f).padding(horizontal = 15.u, vertical = 17.u),
             horizontalArrangement = Arrangement.spacedBy(12.u)) {
-            HistoryList(records, selected, Modifier.weight(2f).fillMaxHeight(.83f)) { selected = it }
-            HistoryDetail(record, Modifier.weight(3f).fillMaxHeight(.83f))
+            HistoryList(records, selected, Modifier.weight(2f).fillMaxHeight(), scrollable = true) { selected = it }
+            HistoryDetail(record, Modifier.weight(3f).fillMaxHeight(), scrollable = true)
         } else Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(12.u),
             verticalArrangement = Arrangement.spacedBy(12.u)) {
-            HistoryList(records, selected, Modifier.fillMaxWidth().heightIn(max = 416.u)) { selected = it }
-            HistoryDetail(record, Modifier.fillMaxWidth())
+            HistoryList(records, selected, Modifier.fillMaxWidth(), scrollable = false) { selected = it }
+            HistoryDetail(record, Modifier.fillMaxWidth(), scrollable = false)
         }
     }
 }
 
 @Composable
-private fun HistoryList(records: List<DemoRecord>, selected: Int, modifier: Modifier, select: (Int) -> Unit) {
+private fun HistoryList(
+    records: List<DemoRecord>, selected: Int, modifier: Modifier, scrollable: Boolean, select: (Int) -> Unit,
+) {
     Panel(modifier) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(19.u),
+        val scroll = if (scrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier
+        Column(Modifier.fillMaxWidth().then(scroll).padding(19.u),
             verticalArrangement = Arrangement.spacedBy(7.u)) {
             Label("최근 30일", 11, Teal)
             Label("주행 기록", 27)
@@ -93,9 +96,11 @@ private fun HistoryList(records: List<DemoRecord>, selected: Int, modifier: Modi
 }
 
 @Composable
-private fun HistoryDetail(record: DemoRecord, modifier: Modifier) {
+private fun HistoryDetail(record: DemoRecord, modifier: Modifier, scrollable: Boolean) {
     Panel(modifier) {
-        Column(Modifier.fillMaxWidth().padding(22.u), verticalArrangement = Arrangement.spacedBy(14.u)) {
+        val scroll = if (scrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier
+        Column(Modifier.fillMaxWidth().then(scroll).padding(22.u),
+            verticalArrangement = Arrangement.spacedBy(14.u)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Label(record.date, 11, Teal)
@@ -105,7 +110,7 @@ private fun HistoryDetail(record: DemoRecord, modifier: Modifier) {
                 Label("점", 11, Muted)
             }
             TripMetrics(record)
-            Label("점수 및 경험치 변동", 11, Muted)
+            Label("점수 및 경험치 변동 · 시연", 11, Muted)
             ScoreRow("30", "어린이 보호구역 안전 통과", "제한속도를 안정적으로 유지했어요", "+20 XP", false)
             if (record.score < 95) ScoreRow("●", "황색 신호 진입", "정지선 전 감속이 늦었어요", "-8점 · -15 XP", true)
             else ScoreRow("✓", "안전 주행 유지", "급가속·급제동 없이 주행했어요", "+35 XP", false)
@@ -121,12 +126,12 @@ internal fun ProfilePage(state: PleosDriveState, modifier: Modifier, wide: Boole
         UtilityHeader("마이페이지")
         if (wide) Row(Modifier.fillMaxWidth().weight(1f).padding(horizontal = 15.u, vertical = 17.u),
             horizontalArrangement = Arrangement.spacedBy(13.u)) {
-            ProfileMain(state, Modifier.weight(1.94f).fillMaxHeight(.83f)) { detail = it }
-            VehiclePanel(selectedPart, state.batteryLevel, Modifier.weight(1f).fillMaxHeight(.83f)) { selectedPart = it }
+            ProfileMain(state, Modifier.weight(1.94f).fillMaxHeight()) { detail = it }
+            VehiclePanel(selectedPart, state.batteryLabel, state.inspection?.odometerKm, Modifier.weight(1f).fillMaxHeight()) { selectedPart = it }
         } else Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(12.u),
             verticalArrangement = Arrangement.spacedBy(12.u)) {
             ProfileMain(state, Modifier.fillMaxWidth().heightIn(max = 480.u)) { detail = it }
-            VehiclePanel(selectedPart, state.batteryLevel, Modifier.fillMaxWidth().height(460.u)) { selectedPart = it }
+            VehiclePanel(selectedPart, state.batteryLabel, state.inspection?.odometerKm, Modifier.fillMaxWidth().height(460.u)) { selectedPart = it }
         }
     }
     if (detail.isNotBlank()) ProfileDialog(detail, state, wide) { detail = "" }
@@ -142,9 +147,9 @@ private fun ProfileMain(state: PleosDriveState, modifier: Modifier, select: (Str
                 Column(Modifier.weight(2f)) {
                     Label("골드 드라이버", 11, Teal)
                     Label(state.driverName, 22, lines = 1)
-                    Label("마을 레벨 8 · ${if (state.toggles[7]) "프로필 공개" else "프로필 비공개"}", 11, Muted, lines = 1)
+                    Label("마을 레벨 ${state.villageLevel} · ${if (state.toggles[7]) "프로필 공개" else "프로필 비공개"}", 11, Muted, lines = 1)
                 }
-                listOf("8,420" to "누적 주행 km", "94" to "안전운전 점수", "Lv. 8" to "마을 레벨").forEach { (value, caption) ->
+                listOf("2,277" to "누적 안전운전 km · 시연", "94" to "안전운전 점수 · 시연", "Lv. ${state.villageLevel}" to "마을 레벨").forEach { (value, caption) ->
                     Column(Modifier.weight(.78f), horizontalAlignment = Alignment.CenterHorizontally) {
                         Label(value, 17, weight = FontWeight.Bold, lines = 1)
                         Label(caption, 10, Teal, lines = 1)
@@ -158,7 +163,7 @@ private fun ProfileMain(state: PleosDriveState, modifier: Modifier, select: (Str
 }
 
 @Composable
-private fun VehiclePanel(selected: Int, battery: Int?, modifier: Modifier, choose: (Int) -> Unit) {
+private fun VehiclePanel(selected: Int, battery: String, odometerKm: Float?, modifier: Modifier, choose: (Int) -> Unit) {
     Panel(modifier) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(19.u),
             verticalArrangement = Arrangement.spacedBy(10.u)) {
@@ -166,17 +171,15 @@ private fun VehiclePanel(selected: Int, battery: Int?, modifier: Modifier, choos
                 horizontalArrangement = Arrangement.spacedBy(10.u)) {
                 IconTile("car", 42, Color(0xFF65CCC0))
                 Column(Modifier.weight(1f)) {
-                    Label("연결된 차량 · 데모", 9, Muted)
+                    Label("차량 모델 · 시연", 9, Muted)
                     Label("차차 EV 2025", 14, weight = FontWeight.Medium)
                 }
-                Label("정상", 11, Teal)
+                Label("EV 충전량 $battery", 11, Teal)
             }
+            odometerKm?.let { Label("차량 누적 주행거리 %,.1f km".format(java.util.Locale.KOREA, it), 11, Muted) }
             VehicleModel(vehicleParts[selected].group, Modifier.fillMaxWidth().height(218.u))
-            Label("차량 부품 상태", 12, weight = FontWeight.Bold)
-            vehicleParts.forEachIndexed { index, sample ->
-                val part = if (index == 0 && battery != null) {
-                    sample.copy(detail = "$battery% · 차량 데이터", percent = battery)
-                } else sample.copy(detail = "${sample.detail} · 데모")
+            Label("차량 부품 상태 · 시연", 12, weight = FontWeight.Bold)
+            vehicleParts.forEachIndexed { index, part ->
                 Column(Modifier.fillMaxWidth().heightIn(min = 48.u).clip(RoundedCornerShape(8.u))
                     .background(if (selected == index) Color(0xFFE8F6F2) else Color.Transparent)
                     .clickable { choose(index) }.padding(8.u), verticalArrangement = Arrangement.spacedBy(5.u)) {
@@ -209,15 +212,18 @@ private fun ProfileDialog(title: String, state: PleosDriveState, wide: Boolean, 
             "업적 및 배지" -> BadgeGrid(wide)
             "마을 성장 기록" -> villageStages.take((state.earnedXp / 800 + 1).coerceIn(1, villageStages.size))
                 .forEachIndexed { index, label -> Label("Lv. ${index + 1}   $label", 15, Teal) }
-            "친구 및 커뮤니티" -> friends.forEach { (friend, level) ->
-                Label("$friend · ${villageStages[level]}", 15)
+            "친구 및 커뮤니티" -> friends.forEachIndexed { index, (friend, level) ->
+                AppListRow("user", friend, villageStages[level]) {
+                    state.visitFriend(index)
+                    close()
+                }
             }
         }
     }
 }
 
 @Composable
-internal fun SettingsPage(state: PleosDriveState, modifier: Modifier, wide: Boolean) {
+internal fun SettingsPage(state: PleosDriveState, modifier: Modifier) {
     var detail by rememberSaveable { mutableStateOf("") }
     Column(modifier) {
         UtilityHeader("설정")
@@ -232,22 +238,7 @@ internal fun SettingsPage(state: PleosDriveState, modifier: Modifier, wide: Bool
                 preferences.take(7).forEachIndexed { index, (title, description) ->
                     ToggleRow(title, description, state.toggles[index]) { state.toggle(index) }
                 }
-                Spacer(Modifier.height(20.u))
-                Label("내비게이션 빠른 실행", 15, weight = FontWeight.Bold)
-                Label("오른쪽 하단 버튼 편집 · 최대 4개까지 선택", 11, Muted)
-                Spacer(Modifier.height(8.u))
-                quickActions.indices.chunked(3).forEach { indices ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.u)) {
-                        indices.forEach { index ->
-                            val chosen = index in state.selectedQuickActions
-                            ActionButton(quickActions[index].label + if (chosen) " ✓" else " ＋",
-                                Modifier.weight(1f), bg = if (chosen) Color(0xFFD9F4EA) else Wash, fg = Teal) {
-                                state.toggleAction(index)
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(7.u))
-                }
+
                 Spacer(Modifier.height(13.u))
                 Label("개인정보 및 계정", 15, weight = FontWeight.Bold)
                 ToggleRow(preferences[7].first, preferences[7].second, state.toggles[7]) { state.toggle(7) }
@@ -256,7 +247,6 @@ internal fun SettingsPage(state: PleosDriveState, modifier: Modifier, wide: Bool
                 }
             }
         }
-        if (wide) Spacer(Modifier.height(77.u))
     }
     if (detail.isNotBlank()) SettingsDialog(detail, state) { detail = "" }
 }
@@ -289,7 +279,7 @@ private fun SettingsDialog(title: String, state: PleosDriveState, close: () -> U
     AppDialog(title, "설정", "settings", close) {
         when (title) {
             "앱 정보 / 버전" -> {
-                Label("다함께 차차차", 21, weight = FontWeight.Bold)
+                Label("Safe Town", 21, weight = FontWeight.Bold)
                 Label("안전운전으로 함께 성장하는 마을 · 1.0", 14, Muted)
             }
             "운전자 프로필 전환" -> entries.forEach { profile ->
@@ -306,10 +296,6 @@ private fun SettingsDialog(title: String, state: PleosDriveState, close: () -> U
                         ActionButton(mode, Modifier.weight(1f), bg = if (state.displayMode == mode) Teal else Muted) { state.saveDisplayMode(mode) }
                     }
                 }
-            }
-            "지도 다운로드 관리" -> {
-                entries.forEach { region -> AppListRow("location", region, "오프라인 지도 · 데모") { choice = region } }
-                if (choice.isNotBlank()) Label("$choice 선택됨 · 지도 서비스 연결 필요", 13, Teal)
             }
             "고객센터 / FAQ" -> entries.forEach { question ->
                 AppListRow("message", question, if (choice == question) "차량 연결 및 앱 설정을 확인해 주세요." else "") { choice = question }
@@ -328,7 +314,8 @@ private fun TripMetrics(record: DemoRecord, dark: Boolean = false) {
     val color = if (dark) Color(0xFF29434B) else Line
     HorizontalDivider(color = color)
     Row(Modifier.fillMaxWidth().padding(vertical = 14.u), horizontalArrangement = Arrangement.SpaceEvenly) {
-        listOf("주행 거리" to record.distance, "주행 시간" to record.duration,
+        listOf((if (record.distanceFromVehicle) "차량 주행거리" else "주행 거리") to record.distance,
+            "세션 시간" to record.duration,
             (if (dark) "최종 경험치" else "획득 경험치") to "+${record.xp} XP").forEach { (caption, value) ->
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Label(caption, 10, if (dark) Color(0xFF8CAAB4) else Teal)
@@ -371,7 +358,7 @@ internal fun ResultPage(record: DemoRecord, modifier: Modifier, wide: Boolean, h
                     horizontalArrangement = Arrangement.spacedBy(15.u)) {
                     IconTile("shield", 58, Navy, Mint)
                     Column(Modifier.weight(1f)) {
-                        Label("주행이 안전하게 종료되었습니다", 11, Mint)
+                        Label("주행 세션 종료 · 점수와 보상은 시연용", 11, Mint)
                         Label("오늘의 주행 결과", 27, Color.White, weight = FontWeight.Medium)
                     }
                     Label("${record.score}", 43, Color.White, weight = FontWeight.Bold)
@@ -394,7 +381,7 @@ internal fun ResultPage(record: DemoRecord, modifier: Modifier, wide: Boolean, h
 @Composable
 private fun Rewards(modifier: Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(7.u)) {
-        Label("경험치 및 점수 내역", 13, Color.White)
+        Label("경험치 및 점수 내역 · 시연", 13, Color.White)
         ScoreRow("30", "어린이 보호구역 안전 통과", "제한속도를 잘 지켰어요", "+20 XP", false)
         ScoreRow("●", "황색 신호 진입", "정지선 전 감속이 늦었어요", "-8점 · -15 XP", true)
         ScoreRow("✓", "급가속·급제동 없이 주행", "편안한 주행을 유지했어요", "+35 XP", false)

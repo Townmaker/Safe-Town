@@ -18,24 +18,23 @@ internal enum class DrivePage(val label: String, val icon: String) {
 
 internal data class DemoRecord(
     val date: String, val route: String, val distance: String,
-    val duration: String, val xp: Int, val score: Int,
+    val duration: String, val xp: Int, val score: Int, val distanceFromVehicle: Boolean = false,
 )
 
 internal data class VehiclePart(val name: String, val detail: String, val percent: Int, val group: Int)
 
 internal val vehicleParts = listOf(
-    VehiclePart("고전압 배터리", "72% · 정상", 72, 0),
-    VehiclePart("타이어 공기압", "36 / 36 PSI", 92, 1),
-    VehiclePart("브레이크 패드", "잔량 81%", 81, 2),
-    VehiclePart("냉각수", "점검 8,200km", 65, 3),
-    VehiclePart("엔진 오일", "레벨 정상", 88, 3),
-    VehiclePart("브레이크액", "수분도 정상", 91, 2),
-    VehiclePart("워셔액", "보충 필요", 24, 3),
-    VehiclePart("회생 제동 시스템", "정상 작동", 96, 0),
-    VehiclePart("서스펜션", "점검 12,000km", 78, 1),
-    VehiclePart("에어컨 필터", "교체 2,100km", 62, 0),
-    VehiclePart("와이퍼 블레이드", "양호", 76, 3),
-    VehiclePart("전조등·후미등", "전체 정상", 100, 0),
+    VehiclePart("엔진오일", "교체까지 7,640km", 76, 3),
+    VehiclePart("브레이크액", "교체까지 15,614km", 61, 2),
+    VehiclePart("냉각수", "교체까지 75,614km", 76, 3),
+    VehiclePart("에어컨필터", "교체까지 7,640km", 76, 0),
+    VehiclePart("브레이크패드", "교체까지 15,614km", 61, 2),
+    VehiclePart("자동차 배터리", "교체까지 2년 4개월", 58, 0),
+    VehiclePart("타이어", "교체까지 25,614km", 51, 1),
+    VehiclePart("엔진에어필터", "교체까지 15,614km", 61, 0),
+    VehiclePart("미션오일", "교체까지 55,614km", 70, 3),
+    VehiclePart("점화플러그", "교체까지 55,614km", 70, 0),
+    VehiclePart("연료필터", "교체까지 25,614km", 51, 0),
 )
 
 internal val villageStages = listOf(
@@ -53,7 +52,7 @@ internal val badges = listOf(
 internal data class QuickAction(val label: String, val icon: String)
 internal val quickActions = listOf(
     QuickAction("전화", "phone"), QuickAction("메시지", "message"), QuickAction("음악", "music"),
-    QuickAction("AI에게 말하기", "sparkles"), QuickAction("집으로", "home"), QuickAction("최근 목적지", "history"),
+    QuickAction("AI에게 말하기", "sparkles"),
 )
 
 internal val preferences = listOf(
@@ -80,7 +79,6 @@ internal val settingDetails = linkedMapOf(
     "주행 데이터 관리" to listOf("자동 주행 기록", "안전점수 분석", "위반 이벤트 저장", "월간 리포트 생성"),
     "개인정보 및 보안" to listOf("생체 인증", "앱 잠금", "위치 기록 보호", "친구 공개 범위"),
     "음성 데이터 및 AI 설정" to listOf("온디바이스 음성 인식", "음성 기록 자동 삭제", "차차 AI 개인화", "음성 호출어 사용"),
-    "지도 다운로드 관리" to listOf("서울·경기", "강원도", "충청도", "전라도", "경상도", "제주도"),
     "배지·컬렉션 알림 관리" to listOf("새 지역 배지", "기간 한정 배지", "친구 획득 소식", "컬렉션 완성 알림"),
     "화면 밝기 및 주·야간 모드" to listOf("주간", "야간", "자동"),
     "운전자 프로필 전환" to listOf("안전운전 마스터", "김민준", "게스트 모드"),
@@ -95,33 +93,66 @@ private val initialRecords = listOf(
     DemoRecord("6월 7일 08:35", "마포 → 판교", "31.8 km", "48분 11초", 204, 90),
 )
 
-internal data class RoutePreview(
-    val place: String,
-    val distance: String,
-    val arrival: String,
-    val confirmed: Boolean = true,
+internal data class RoutePreview(val place: String, val confirmed: Boolean = true)
+
+internal data class NavigationPlace(
+    val name: String,
+    val address: String = "",
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val displayLatitude: Double? = null,
+    val displayLongitude: Double? = null,
+    val poiId: String? = null,
+    val poiSubId: String? = null,
+    val poiProvider: String? = null,
+)
+
+internal data class DestinationSearch(
+    val origin: String? = null,
+    val recent: List<NavigationPlace>? = null,
 )
 
 internal interface NavigationService {
     val isDemo: Boolean
-    val suggestedPlaces: List<String>
-    suspend fun requestRoute(place: String): RoutePreview
+    val suggestedPlaces: List<NavigationPlace>
+    suspend fun destinationSearch(): DestinationSearch
+    suspend fun nextInstruction(): String?
+    suspend fun requestRoute(place: NavigationPlace): RoutePreview
 }
 
 internal class DemoNavigationService : NavigationService {
     override val isDemo = true
-    override val suggestedPlaces = listOf("서울숲 주차장", "여의도 한강공원", "성수동 카페거리", "강남역 5번 출구")
+    override val suggestedPlaces = emptyList<NavigationPlace>()
+    private val recent = listOf(
+        NavigationPlace("서울숲 주차장", "서울 성동구 뚝섬로 273"),
+        NavigationPlace("여의도 한강공원"),
+        NavigationPlace("성수동 카페거리"),
+        NavigationPlace("강남역 5번 출구"),
+    )
 
-    override suspend fun requestRoute(place: String): RoutePreview {
+    override suspend fun destinationSearch() = DestinationSearch("현재 위치", recent)
+
+    override suspend fun nextInstruction(): String? = null
+
+    override suspend fun requestRoute(place: NavigationPlace): RoutePreview {
         delay(700)
-        return RoutePreview(place, "8.7km", "10:41")
+        return RoutePreview(place.name)
     }
 }
 
 internal class PleosDriveState(context: Context) {
     private val storage = context.getSharedPreferences("village_drive", Context.MODE_PRIVATE)
-    var batteryLevel by mutableStateOf<Int?>(null)
-    val batteryLabel: String get() = batteryLevel?.let { "$it%" } ?: "72% · 데모"
+    val automotive = context.isAutomotive()
+    var inspection by mutableStateOf<VehicleInspection?>(null)
+    val batteryLabel: String
+        get() = inspection?.battery?.let { "$it%" } ?: if (automotive) "—" else "72% · 시연"
+    var visitingFriend by mutableStateOf<Int?>(null)
+    val villageLevel get() = (earnedXp / 800 + 1).coerceIn(1, villageStages.size)
+
+    fun visitFriend(index: Int) {
+        visitingFriend = index
+        navigate(DrivePage.Village)
+    }
 
     private var detailToggles by mutableStateOf(
         settingDetails.flatMap { (title, items) ->
@@ -160,6 +191,7 @@ internal class PleosDriveState(context: Context) {
     var isDriving by mutableStateOf(false)
         private set
     var elapsed by mutableStateOf(0)
+    private var startOdometerKm: Float? = null
     var destination by mutableStateOf<RoutePreview?>(null)
     var result by mutableStateOf<DemoRecord?>(null)
         private set
@@ -169,11 +201,7 @@ internal class PleosDriveState(context: Context) {
         private set
     var earnedXp by mutableStateOf(storage.getInt("xp", 0))
         private set
-    var selectedQuickActions by mutableStateOf(
-        storage.getString("quickActions", "0,1,2,3").orEmpty().split(",")
-            .mapNotNull(String::toIntOrNull).filter { it in quickActions.indices }.distinct().take(4)
-    )
-        private set
+    val selectedQuickActions = listOf(0, 1, 2, 3)
     var toggles by mutableStateOf(preferences.indices.map { storage.getBoolean("toggle-$it", it != 4) })
         private set
 
@@ -181,6 +209,7 @@ internal class PleosDriveState(context: Context) {
         if (target == DrivePage.Driving && !isDriving) {
             elapsed = 0
             destination = null
+            startOdometerKm = inspection?.odometerKm
             isDriving = true
         }
         page = target
@@ -188,19 +217,27 @@ internal class PleosDriveState(context: Context) {
 
     fun endDrive() {
         if (!isDriving) return
+        val start = startOdometerKm
+        val end = inspection?.odometerKm
+        val measuredDistance = if (start != null && end != null && end >= start) end - start else null
+        val distance = measuredDistance?.let { String.format(Locale.US, "%.1f km", it) }
+            ?: "확인 불가".takeIf { automotive }
+            ?: String.format(Locale.US, "%.1f km", elapsed * 58 / 3600.0)
         val record = DemoRecord(
-            "오늘", "현재 위치 → ${destination?.takeIf { it.confirmed }?.place ?: "푸른대로"}",
-            String.format(Locale.US, "%.1f km", elapsed * 58 / 3600.0),
-            "${elapsed / 60}분 ${elapsed % 60}초", 142, 92,
+            "오늘", destination?.takeIf { it.confirmed }?.let { "현재 위치 → ${it.place}" }
+                ?: if (automotive) "목적지 미설정" else "현재 위치 → 푸른대로",
+            distance, "${elapsed / 60}분 ${elapsed % 60}초", 142, 92, measuredDistance != null,
         )
         isDriving = false
+        startOdometerKm = null
         result = record
         records = listOf(record) + records
         earnedXp += record.xp
         val recent = JSONArray()
         records.dropLast(initialRecords.size).take(30).forEach { item ->
             recent.put(JSONObject().put("date", item.date).put("route", item.route).put("distance", item.distance)
-                .put("duration", item.duration).put("xp", item.xp).put("score", item.score))
+                .put("duration", item.duration).put("xp", item.xp).put("score", item.score)
+                .put("distanceFromVehicle", item.distanceFromVehicle))
         }
         storage.edit().putInt("xp", earnedXp).putString("records", recent.toString()).apply()
         page = DrivePage.Result
@@ -219,21 +256,13 @@ internal class PleosDriveState(context: Context) {
         storage.edit().putBoolean("toggle-$index", enabled).apply()
     }
 
-    fun toggleAction(index: Int) {
-        selectedQuickActions = when {
-            index in selectedQuickActions -> selectedQuickActions - index
-            selectedQuickActions.size < 4 -> selectedQuickActions + index
-            else -> return
-        }
-        storage.edit().putString("quickActions", selectedQuickActions.joinToString(",")).apply()
-    }
-
     private fun readRecords(): List<DemoRecord> = runCatching {
         val json = JSONArray(storage.getString("records", "[]"))
         List(json.length()) { index ->
             val item = json.getJSONObject(index)
             DemoRecord(item.getString("date"), item.getString("route"), item.getString("distance"),
-                item.getString("duration"), item.getInt("xp"), item.getInt("score"))
+                item.getString("duration"), item.getInt("xp"), item.getInt("score"),
+                item.optBoolean("distanceFromVehicle"))
         }
     }.getOrDefault(emptyList())
 }
