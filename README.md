@@ -42,3 +42,29 @@ Windows의 **Pleos Connect v2.1.0 에뮬레이터**에서 다음 동작을 확�
 ```
 
 macOS 또는 Linux에서는 `./gradlew :app:assembleDebug :app:testDebugUnitTest`를 사용합니다.
+
+## 시안
+
+### 홈
+
+![홈 시안](docs/design/01-home.png)
+
+### 주행
+
+![주행 시안](docs/design/02-driving.png)
+
+### 주행 결과
+
+![주행 결과 시안](docs/design/03-drive-result.png)
+
+### 주행 기록
+
+![주행 기록 시안](docs/design/04-drive-history.png)
+
+### 마이페이지
+
+![마이페이지 시안](docs/design/05-profile.png)
+
+### 설정
+
+![설정 시안](docs/design/06-settings.png)
